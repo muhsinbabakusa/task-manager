@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard (Real API)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      font-size: 16px;
+      border-radius: 40px;
+      border: 1px;
+      
+    }
+
+    #userList {
+      margin-top: 20px;
+      padding: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+    }
+
+    #userList div {
+      background: white;
+      padding: 25px;
+      border-radius: 40px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    #userList h3 {
+      margin: 0;
+      color: black;
+      font-size: 30px;
+    }
+       #userList h4 {
+     margin: 5px 0;
+      font-weight: 100;
+      color:#404040;
+    }
+
+    #userList p {
+      margin: 5px 0;
+      font-weight: 100;
+      color: rgb(0, 157, 255);
+    }
+     #userList span {
+      margin: 5px 0;
+      font-weight: 100;
+      color:rgb(56, 197, 56);
+    }
+    select{
+       padding: 10px;
+      margin: 5px;
+      font-size: 16px;
+      border-radius: 40px; 
+      width: 1 00px;
+    }
+  </style>
+</head>
+<body>
+  <h1>📋 Your Task Dashboard</h1>
+
+ <h2 id="formHeading">Create Task</h2>
+<form id="createForm"
+>
+  <input id="title" placeholder="Task title *" required />
+  <input id="description" placeholder="Description (optional)" />
+  <select id="priority">
+    <option value="low">Low</option>
+    <option value="medium" selected>Medium</option>
+    <option value="high">High</option>
+  </select>
+  <input id="deadline" type="date" />
+  <input type="hidden" id="editTaskId"/>
+  <button id="submitBtn" type="submit">＋ Create Task</button>
+  <button type="button" id="cancelEdit" style="display:none;">Cancel Edit</button>
+</form>
+
+<hr/>
+
+  <div id="userList">Loading tasks...</div>
+
+
+
+  <script>
+    const token = localStorage.getItem("access_token");
+
+    if (!token) {
+      alert("You are not logged in. Redirecting to login...");
+      window.location.href = "login.html"; // or your login page
+    }
+
+    fetch("http://127.0.0.1:8000/get_task", {
+      method: "GET",
+      headers: {
+        "Authorization": "Bearer " + token
+      }
+    })
+    .then(res => {
+      if (!res.ok) {
+        throw new Error("Failed to load tasks. Status: " + res.status);
+      }
+      return res.json();
+    })
+    .then(data => {
+      const container = document.getElementById("userList");
+      container.innerHTML = ""; // clear the 'Loading...' text
+
+      if (data.tasks.length === 0) {
+        container.innerHTML = "<p>No tasks found.</p>";
+        return;
+      }
+
+      data.tasks.forEach(task => {
+        const taskDiv = document.createElement("div");
+        taskDiv.innerHTML = `
+          <h3>${task.title}</h3>
+          <h4>${task.description}</h4>
+          <p>Status: <span>${task.status || (task.completed ? "Done" : "pending")}</span></p>
+          <p>Priority: ${task.priority}</p>
+          <p>Deadline: ${task.deadline || "None"}</p>
+          <button onclick="markDone(${task.id})">✅ Mark as Done</button>
+          <button onclick="deleteTask(${task.id})">🗑️ Delete</button>
+          <button onclick="startEdit(${task.id}, ${JSON.stringify(task).replace(/"/g, '&quot;')})">✏️ Edit</button>
+        `;
+        container.appendChild(taskDiv);
+      });
+    })
+    .catch(error => {
+      console.error("Error loading tasks:", error);
+      document.getElementById("userList").innerHTML = "<p style='color:red;'>Failed to load tasks. Please check your login or try again later.</p>";
+    });
+
+
+
+  function markDone(taskId) {
+    const token = localStorage.getItem("access_token");
+
+    fetch(`http://127.0.0.1:8000/mark_done?task_id=${taskId}`, {
+      method: "PATCH",
+      headers: {
+        "Authorization": "Bearer " + token
+      }
+    })
+    .then(res => res.json())
+    .then(result => {
+      alert(result.message);
+      location.reload(); // reloads the page to refresh the task list
+    })
+    .catch(err => {
+      console.error("Error marking task as done:", err);
+      alert("Failed to mark task as done");
+    });
+  }
+  function deleteTask(taskId){
+    const token = localStorage.getItem("access_token");
+
+    fetch(`http://127.0.0.1:8000/delete_task?task_id=${taskId}`,{
+        method: "DELETE",
+          headers: {
+        "Authorization": "Bearer " + token
+      }
+    })
+    .then(res => res.json())
+    .then(result => {
+        alert(result.message);
+        location.reload();
+    })
+    .catch(err => {
+        console.error("Error removing task", err);
+        alert("Failed to remove task");
+    });
+
+  }
+
+ const createForm = document.getElementById("createForm");
+if (createForm){
+  createForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const payload = {
+      title: document.getElementById("title").value.trim(),
+      description: document.getElementById("description").value.trim(),
+      priority: document.getElementById("priority").value,
+      deadline: document.getElementById("deadline").value || null
+    };
+
+    if (!payload.title){
+      alert("Title is required");
+      return;
+    }
+
+    const editId = document.getElementById("editTaskId").value; // NEW
+    const isEditing = !!editId; // NEW
+
+    const submitBtn = createForm.querySelector("button[type='submit']");
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = isEditing ? "Updating..." : "Creating..."; // CHANGED
+
+    // CHANGED: Pick URL & method
+    const url = isEditing
+  ? `http://127.0.0.1:8000/update_task/${editId}`
+  : "http://127.0.0.1:8000/create_task";
+
+    const method = isEditing ? "PUT" : "POST";
+
+    fetch(url, {
+      method: method,
+      headers: {
+        "Authorization": "Bearer " + localStorage.getItem("access_token"),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(result => {
+      alert(isEditing ? "Task Updated" : "Task Created"); // CHANGED
+      document.getElementById("cancelEdit").style.display = "none";
+      location.reload();
+    })
+    .catch(err => {
+      console.error("Error saving task:", err);
+      alert("Failed to save task");
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    });
+  });
+}
+
+
+  function startEdit(id, task){
+     document.getElementById("title").value = task.title || "";
+  document.getElementById("description").value = task.description || "";
+  document.getElementById("priority").value = task.priority || "medium";
+  document.getElementById("deadline").value = (task.deadline && task.deadline !== "None") ? task.deadline : "";
+
+    document.getElementById("editTaskId").value = id;
+
+      const submitBtn = document.getElementById("submitBtn");
+        if (submitBtn) submitBtn.textContent = "Update Task";
+        document.getElementById("cancelEdit").style.display = "inline-block";
+        document.getElementById("formHeading").textContent = "Edit Task";
+        document.getElementById("createForm").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  window.startEdit = startEdit;
+  
+  const cancelBtn = document.getElementById("cancelEdit");
+if (cancelBtn) {
+  cancelBtn.addEventListener("click", function () {
+    document.getElementById("editTaskId").value = "";
+    document.getElementById("title").value = "";
+    document.getElementById("description").value = "";
+    document.getElementById("priority").value = "medium";
+    document.getElementById("deadline").value = "";
+
+    document.getElementById("cancelEdit").style.display = "none";
+    const submitBtn = document.getElementById("submitBtn");
+    document.getElementById("formHeading").textContent = "Create Task";
+    if (submitBtn) submitBtn.textContent = "＋ Create Task";
+  });
+}
+  </script>
+</body>
+</html>

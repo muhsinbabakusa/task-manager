@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        *{
+            padding: 0;
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        body{
+            text-align: center;
+        }
+        form{
+            
+            height: 500px;
+            margin:200px ;
+        }
+        input{
+                 width: 500px;
+            height: 30px;
+            margin: 20px;
+            font-size: large;
+            border-radius: 20px;
+            border: solid 1px black;
+            color: black;
+            padding: 10px;
+        }
+             input::placeholder{
+            padding: 5px;
+        }
+        button{
+            width: 300px;
+            height: 50px;
+             font-size: large;
+             background-color: black;
+             color: white;
+             border-radius: 20px;
+        }
+    </style>
+</head>
+<body>
+<form id="signupForm">
+  <input type="text" id="full_name" name="full_name" placeholder="Full Name" required><br>
+  <input type="email" id="email" name="email" placeholder="Email" required><br>
+  <input type="password" id="password" name="password" placeholder="Password" required><br>
+  <button type="submit">Register</button>
+</form>
+    <script>
+        document.getElementById("signupForm").addEventListener("submit", function(e)  {
+            e.preventDefault();  // Stops the form from refreshing the page
+            const form = e.target;
+
+            const data ={
+                full_name: form.full_name.value,
+                email: form.email.value,
+                password: form.password.value
+            }; //anan we collected the input(zamu tura shi zuwa api dinmu)\\
+
+            fetch("http://127.0.0.1:8000/register",{
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data)
+            }) // this sends all the info to my api a gurguje, hahahhaha
+            .then(response =>response.json())
+            .then(result =>{
+                if(result.message){
+                    alert("Sign-up Successfull!!!");
+                    window.location.href = "dashboard.html";
+                }
+                else{
+                    alert("Signup failed: " + (result.detail || "Unknown error"));
+                }
+            })
+        })
+    </script>
+</body>
+</html>
