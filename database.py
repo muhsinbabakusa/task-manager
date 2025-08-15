@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 load_dotenv()  # read .env locally; on Render/Railway their env panel provides vars
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = "mysql+mysqlconnector://root:uUDXddXFMxVVEAhZWZQlnWdkbFHMPyat@switchyard.proxy.rlwy.net:27561/railway"
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not set")
 
