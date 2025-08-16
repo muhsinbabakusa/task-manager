@@ -49,6 +49,7 @@
   <button type="submit">Register</button>
 </form>
     <script>
+         const API_BASE = "https://task-manager-8d1z.onrender.com";
         document.getElementById("signupForm").addEventListener("submit", function(e)  {
             e.preventDefault();  // Stops the form from refreshing the page
             const form = e.target;
@@ -59,7 +60,7 @@
                 password: form.password.value
             }; //anan we collected the input(zamu tura shi zuwa api dinmu)\\
 
-            fetch("http://127.0.0.1:8000/register",{
+            fetch(`${API_BASE}/register`,{
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"

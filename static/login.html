@@ -14,9 +14,8 @@
             text-align: center;
         }
         form{
-            
             height: 500px;
-            margin:200px ;
+            margin:200px;
         }
         input{
             width: 500px;
@@ -49,30 +48,38 @@
 </form>
 
     <script>
-        document.getElementById("loginForm").addEventListener("submit", function(e){
-            e.preventDefault();
-            const form = e.target;
-            const formData = new FormData();
-            formData.append("username",form.email.value);
-            formData.append("password", form.password.value);
-            
-        fetch("http://127.0.0.1:8000/login", {
-                method: "POST",
-                body: formData
-        })
+        // 🔁 Point this to your live API base:
+    const API_BASE = "https://task-manager-8d1z.onrender.com";
 
-            .then(result => result.json())
-            .then(result => {
-                if(result.access_token){
-                 
-                    localStorage.setItem("access_token", result.access_token); 
-                    window.location.href = "dashboard.html";
-                }
-                else {
-                    alert("Login failed: " + (result.detail || "Unknown error"));
-  }
-            })
-        })
+    document.getElementById("loginForm").addEventListener("submit", function(e){
+      e.preventDefault();
+      const form = e.target;
+
+      // OAuth2PasswordRequestForm expects fields named "username" and "password"
+      const formData = new FormData();
+      formData.append("username", form.email.value);
+      formData.append("password", form.password.value);
+
+      // ✅ Use /login (POST) — not /get_task
+      fetch(`${API_BASE}/login`, {
+        method: "POST",
+        body: formData
+      })
+      .then(res => res.json())
+      .then(result => {
+        if (result.access_token) {
+          localStorage.setItem("access_token", result.access_token);
+          // Go to your dashboard page
+          window.location.href = "dashboard.html";
+        } else {
+          alert("Login failed: " + (result.detail || "Unknown error"));
+        }
+      })
+      .catch(err => {
+        console.error("Login error:", err);
+        alert("Unable to login right now.");
+      });
+    });
     </script>
 </body>
 </html>

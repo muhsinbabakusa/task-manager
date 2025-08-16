@@ -96,13 +96,14 @@
 
   <script>
     const token = localStorage.getItem("access_token");
+    const API_BASE = "https://task-manager-8d1z.onrender.com";
 
     if (!token) {
       alert("You are not logged in. Redirecting to login...");
       window.location.href = "login.html"; // or your login page
     }
 
-    fetch("http://127.0.0.1:8000/get_task", {
+    fetch(`${API_BASE}/get_task`, {
       method: "GET",
       headers: {
         "Authorization": "Bearer " + token
@@ -148,7 +149,7 @@
   function markDone(taskId) {
     const token = localStorage.getItem("access_token");
 
-    fetch(`http://127.0.0.1:8000/mark_done?task_id=${taskId}`, {
+    fetch(`${API_BASE}/mark_done?task_id=${taskId}`, {
       method: "PATCH",
       headers: {
         "Authorization": "Bearer " + token
@@ -167,7 +168,7 @@
   function deleteTask(taskId){
     const token = localStorage.getItem("access_token");
 
-    fetch(`http://127.0.0.1:8000/delete_task?task_id=${taskId}`,{
+    fetch(`${API_BASE}/delete_task?task_id=${taskId}`,{
         method: "DELETE",
           headers: {
         "Authorization": "Bearer " + token
@@ -212,8 +213,8 @@ if (createForm){
 
     // CHANGED: Pick URL & method
     const url = isEditing
-  ? `http://127.0.0.1:8000/update_task/${editId}`
-  : "http://127.0.0.1:8000/create_task";
+  ? `${API_BASE}/update_task/${editId}`
+  : `${API_BASE}/create_task`;
 
     const method = isEditing ? "PUT" : "POST";
 

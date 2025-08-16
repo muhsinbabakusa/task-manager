@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
+from sqlalchemy import text
 
 load_dotenv()
 
@@ -35,7 +36,8 @@ FROM_EMAIL = SMTP_USER
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
-#Base.metadata.drop_all(bind=engine)
+
+Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 # Initialize app
 app = FastAPI()
@@ -148,6 +150,13 @@ class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
 
+@app.get("/_debug/db")
+def debug_db(db: Session = Depends(get_db)):
+    from database import engine
+    url = str(engine.url)
+    with engine.connect() as conn:
+        row = conn.execute(text("SELECT DATABASE()")).scalar()
+    return {"url": url, "database": row}
 # Register
 @app.post("/register")
 def register(user: UserCreate, background_tasks:BackgroundTasks, db: Session = Depends(get_db)):
