@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks,File, UploadFile, Form
 from sqlalchemy.orm import Session
 from database import SessionLocal
 from models import User, Task
@@ -19,6 +19,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
 from sqlalchemy import text
+import schemas
+import shutil
+from fastapi.responses import HTMLResponse
 
 load_dotenv()
 
@@ -33,6 +36,9 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "465"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
 FROM_EMAIL = SMTP_USER
+
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://task-manager-8d1z.onrender.com")
+FRONTEND_LOGIN_URL = os.getenv("FRONTEND_LOGIN_URL", "http://localhost:5173/login")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
@@ -58,13 +64,46 @@ def get_db():
         yield db
     finally:
         db.close()
+from smtplib import SMTP_SSL
+from email.mime.text import MIMEText
+
 
 def send_verification_email(to_email: str, token: str):
-    verification_link = f"http://localhost:8000/verify-email?token={token}"
-    subject = "Welcome new user, Verify Your Email"
-    body = f"Click this link to verify your email:\n\n{verification_link}\n\nIf you didn’t register, ignore this email."
+    verification_link = f"{PUBLIC_BASE_URL}/verify-email?token={token}"
+    subject = "🎉 Welcome to Tick App – Verify Your Email"
+    
+    # ✅ Beautiful HTML Email Template
+    body = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; background-color: #f7f9fc; padding: 40px;">
+        <div style="max-width: 600px; margin: auto; background: white; border-radius: 12px; 
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.05); padding: 30px; text-align: center;">
+          <h2 style="color: #333;">Welcome to <span style="color:#4CAF50;">Tick</span></h2>
+          <p style="font-size: 16px; color: #555;">
+            Thank you for signing up, we’re excited to have you on board!
+            <br><br>
+            Please verify your email address by clicking the button below:
+          </p>
+          
+          <a href="{verification_link}" 
+             style="display:inline-block;margin-top:20px;padding:14px 28px;background-color:#4CAF50;
+                    color:white;text-decoration:none;font-weight:bold;border-radius:6px;">
+            Verify Email
+          </a>
+          
+          <p style="margin-top: 30px; color:#777; font-size:14px;">
+            If you didn’t create this account, you can safely ignore this email.
+          </p>
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color:#aaa; font-size:12px;">
+            &copy; 2025 Task Manager Inc. All rights reserved.
+          </p>
+        </div>
+      </body>
+    </html>
+    """
 
-    msg = MIMEText(body)
+    msg = MIMEText(body, "html")  # ✅ "html" mode
     msg["Subject"] = subject
     msg["From"] = FROM_EMAIL
     msg["To"] = to_email
@@ -73,8 +112,9 @@ def send_verification_email(to_email: str, token: str):
         smtp.login(SMTP_USER, SMTP_PASS)
         smtp.sendmail(FROM_EMAIL, [to_email], msg.as_string())
 
+
 def password_reset_email(to_email: str, token: str):
-    reset_link = f"http://localhost:8000/verify-email?token={token}"
+    reset_link = f"{PUBLIC_BASE_URL}/verify-email?token={token}"
     subject = "Password reset"
     body = f"Click this link to reset your email:\n\n{reset_link}"
 
@@ -194,7 +234,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         "access_token": access_token,
         "token_type": "bearer"
     }
-# Create task
+
 @app.post("/create_task")
 def create_task(task: TaskCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     new_task = Task(
@@ -214,7 +254,7 @@ def create_task(task: TaskCreate, db: Session = Depends(get_db), user: User = De
         "title": new_task.title
     }}
 
-# Get tasks
+# Wannan ze kira task dina
 @app.get("/get_task")
 def get_task(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     tasks = db.query(Task).filter(Task.user_id == user.id).all()
@@ -289,6 +329,133 @@ def forget_password(request: ForgotPasswordRequest,background_tasks:BackgroundTa
         "otp": user.reset_token
     } 
     
-@app.post("/rest_password")
+@app.post("/reset_password")
 def reset_password(reset: ResetPasswordRequest,db:Session  = Depends(get_db)):
+    user = db.query(User).filter(User.reset_token == reset.token)
     return
+
+@app.get("/profile")
+def get_profile(db:Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return current_user
+
+@app.put("/profile/update")
+async def update_profile(
+    full_name: str = Form(...),
+    bio: str = Form(None),
+    file: UploadFile = File(None),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    # Update fields
+    user.full_name = full_name or user.full_name
+    user.bio = bio or user.bio
+
+    # Handle file upload if provided
+    if file:
+        # Ensure static dir exists
+        os.makedirs("static/profiles", exist_ok=True)
+
+        file_path = f"static/profiles/{user.id}_{file.filename}"
+        with open(file_path, "wb") as f:
+            f.write(await file.read())
+
+        # Save relative path in DB
+        user.profile_picture = "/" + file_path  
+
+    # Save changes
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "id": user.id,
+        "full_name": user.full_name,
+        "email": user.email,
+        "bio": user.bio,
+        "profile_picture": user.profile_picture
+    }
+@app.post("/profile/profile_pic")
+def profile_pic(file: UploadFile = File(...),db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    upload_dir = "static/profile_pics"
+    os.makedirs(upload_dir, exist_ok=True) 
+
+    # Create a unique filename
+    file_ext = file.filename.split(".")[-1]
+    filename = f"user_{current_user.id}.{file_ext}"
+    file_path = os.path.join(upload_dir, filename)
+
+    # Save file
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+ # Update DB with relative path
+    current_user.profile_picture = f"/static/profile_pics/{filename}"
+    db.commit()
+    db.refresh(current_user)
+
+    return current_user
+
+
+# def upload_profile_picture(
+#     file: UploadFile = File(...),
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_current_user)
+# ):
+#     upload_dir = "static/profile_pics"
+#     os.makedirs(upload_dir, exist_ok=True)
+
+#     # create unique filename (overwrite old if same user)
+#     file_ext = file.filename.split(".")[-1]
+#     filename = f"user_{current_user.id}.{file_ext}"
+#     file_path = os.path.join(upload_dir, filename)
+
+#     # save file
+#     with open(file_path, "wb") as buffer:
+#         shutil.copyfileobj(file.file, buffer)
+
+#     # update DB with path
+#     current_user.profile_picture = f"/static/profile_pics/{filename}"
+#     db.commit()
+#     db.refresh(current_user)
+
+#     return current_user
+
+@app.put("/profile/change_password")
+def change_password(
+    old_pwd: str = Form(...),
+    new_pwd: str = Form(...),
+    db: Session = Depends(get_db),
+    user: User= Depends(get_current_user)
+):
+    if not verify_password(old_pwd, user.password):
+        raise HTTPException(status_code=400, detail= "Old password is not correct")
+
+    user.password = get_password_hash(new_pwd)
+    db.commit()
+    db.refresh(user)    
+
+    return {"message": "Password has successfully been changed"}
+
+@app.get("/verify-email", response_class=HTMLResponse)
+def verify_email(token: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.reset_token == token).first()
+    if not user:
+        return HTMLResponse("""
+            <h2 style="font-family:Arial">Invalid or expired link</h2>
+            <p>The verification link is invalid or has already been used.</p>
+        """, status_code=400)
+
+    # OPTIONAL: requires you to add is_verified column in models.py
+    # If you haven’t added it yet, skip this line and just clear the token.
+    if hasattr(user, "is_verified"):
+        user.is_verified = True
+
+    user.reset_token = None  # consume the token so it can’t be reused
+    db.commit()
+
+    return HTMLResponse(f"""
+        <div style="font-family:Arial;max-width:600px;margin:40px auto;padding:24px;border:1px solid #eee;border-radius:10px;">
+          <h2>✅ Email Verified</h2>
+          <p>{user.email} has been verified successfully.</p>
+          <a href="{FRONTEND_LOGIN_URL}" style="display:inline-block;margin-top:14px;padding:10px 16px;background:#4CAF50;color:#fff;text-decoration:none;border-radius:6px;">Go to Login</a>
+        </div>
+    """)
