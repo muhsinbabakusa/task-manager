@@ -43,7 +43,7 @@ FRONTEND_LOGIN_URL = os.getenv("FRONTEND_LOGIN_URL", "http://localhost:5173/logi
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 
-Base.metadata.drop_all(bind=engine)
+# Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 # Initialize app
 app = FastAPI()
