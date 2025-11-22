@@ -22,6 +22,7 @@ from sqlalchemy import text
 import schemas
 import shutil
 from fastapi.responses import HTMLResponse
+import requests
 
 load_dotenv()
 
@@ -29,6 +30,10 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "change-this")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+
+#RESEND
+RESEND_API_KEY= os.getenv("RESEND_API_KEY", "")
+FROM_EMAIL=os.getenv("FROM_EMAIL", "") 
 
 # Email (from .env)
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
@@ -43,7 +48,7 @@ FRONTEND_LOGIN_URL = os.getenv("FRONTEND_LOGIN_URL", "http://localhost:5173/logi
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 
-Base.metadata.drop_all(bind=engine)
+# Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 # Initialize app
 app = FastAPI()
@@ -73,9 +78,8 @@ from email.mime.text import MIMEText
 def send_verification_email(to_email: str, token: str):
     verification_link = f"{PUBLIC_BASE_URL}/verify-email?token={token}"
     subject = "🎉 Welcome to Tick App – Verify Your Email"
-    
-    # ✅ Beautiful HTML Email Template
-    body = f"""
+
+    html_body = f"""
     <html>
       <body style="font-family: Arial, sans-serif; background-color: #f7f9fc; padding: 40px;">
         <div style="max-width: 600px; margin: auto; background: white; border-radius: 12px; 
@@ -105,29 +109,83 @@ def send_verification_email(to_email: str, token: str):
     </html>
     """
 
-    msg = MIMEText(body, "html")  # ✅ "html" mode
-    msg["Subject"] = subject
-    msg["From"] = FROM_EMAIL
-    msg["To"] = to_email
+    if not RESEND_API_KEY or not FROM_EMAIL:
+        print("❌ RESEND_API_KEY or FROM_EMAIL is not set")
+        return
 
-    with SMTP_SSL(SMTP_HOST, SMTP_PORT) as smtp:
-        smtp.login(SMTP_USER, SMTP_PASS)
-        smtp.sendmail(FROM_EMAIL, [to_email], msg.as_string())
+    try:
+        resp = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {RESEND_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": FROM_EMAIL,
+                "to": [to_email],
+                "subject": subject,
+                "html": html_body,
+            },
+            timeout=15,
+        )
+        print(" Resend verification status:", resp.status_code, resp.text)
+    except Exception as e:
+        print(" EMAIL SEND ERROR (verification):", repr(e))
 
 
 def password_reset_email(to_email: str, token: str):
-    reset_link = f"{PUBLIC_BASE_URL}/verify-email?token={token}"
-    subject = "Password reset"
-    body = f"Click this link to reset your email:\n\n{reset_link}"
+    reset_link = f"{PUBLIC_BASE_URL}/reset-password?token={token}"
+    subject = "Reset your Tick App password"
 
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = FROM_EMAIL
-    msg["To"] = to_email
+    html_body = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; background-color: #f7f9fc; padding: 40px;">
+        <div style="max-width: 600px; margin: auto; background: white; border-radius: 12px; 
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.05); padding: 30px; text-align: center;">
+          <h2 style="color: #333;">Password reset</h2>
+          <p style="font-size: 16px; color: #555;">
+            You requested to reset your Tick account password.
+            <br><br>
+            Click the button below to set a new password:
+          </p>
+          
+          <a href="{reset_link}" 
+             style="display:inline-block;margin-top:20px;padding:14px 28px;background-color:#4CAF50;
+                    color:white;text-decoration:none;font-weight:bold;border-radius:6px;">
+            Reset Password
+          </a>
+          
+          <p style="margin-top: 30px; color:#777; font-size:14px;">
+            If you didn’t request this, you can safely ignore this email.
+          </p>
+        </div>
+      </body>
+    </html>
+    """
 
-    with SMTP_SSL(SMTP_HOST, SMTP_PORT) as smtp:
-        smtp.login(SMTP_USER, SMTP_PASS)
-        smtp.sendmail(FROM_EMAIL, [to_email], msg.as_string())
+    if not RESEND_API_KEY or not FROM_EMAIL:
+        print(" RESEND_API_KEY or FROM_EMAIL is not set")
+        return
+
+    try:
+        resp = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {RESEND_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": FROM_EMAIL,
+                "to": [to_email],
+                "subject": subject,
+                "html": html_body,
+            },
+            timeout=15,
+        )
+        print("📧 Resend reset status:", resp.status_code, resp.text)
+    except Exception as e:
+        print("❌ EMAIL SEND ERROR (reset):", repr(e))
+
 
 # Token creation
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
