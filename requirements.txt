@@ -11,3 +11,4 @@ pydantic
 python-multipart
 email-validator
 alembic
+requests
