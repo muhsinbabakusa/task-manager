@@ -12,6 +12,9 @@ class User(Base):
     email = Column(String(100), unique = True, index = True)
     password = Column(String(100))
     reset_token = Column(String(100), nullable=True)
+    bio = Column(String, nullable=True) 
+    profile_picture = Column(String, nullable=True) 
+    is_verified = Column(Boolean, default=False)  
 
 class Task(Base):
     __tablename__ = "tasks"
