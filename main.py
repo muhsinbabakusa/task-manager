@@ -40,7 +40,7 @@ SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "465"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
-FROM_EMAIL = SMTP_USER
+
 
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://task-manager-8d1z.onrender.com")
 FRONTEND_LOGIN_URL = os.getenv("FRONTEND_LOGIN_URL", "http://localhost:5173/login")
