@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String,DateTime, ForeignKey, Enum, Boolean
+from sqlalchemy import Column, Integer, String,DateTime, ForeignKey, Enum, Boolean, Text
 from database import Base
 import enum
 
@@ -12,8 +12,8 @@ class User(Base):
     email = Column(String(100), unique = True, index = True)
     password = Column(String(100))
     reset_token = Column(String(100), nullable=True)
-    bio = Column(String, nullable=True) 
-    profile_picture = Column(String, nullable=True) 
+    bio = Column(Text, nullable=True)                 # ✅ changed
+    profile_picture = Column(String(255), nullable=True)
     is_verified = Column(Boolean, default=False)  
 
 class Task(Base):
