@@ -43,7 +43,7 @@ SMTP_PASS = os.getenv("SMTP_PASS", "")
 
 
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://task-manager-8d1z.onrender.com")
-FRONTEND_LOGIN_URL = os.getenv("FRONTEND_LOGIN_URL", "http://localhost:5173/login")
+FRONTEND_LOGIN_URL = os.getenv("FRONTEND_LOGIN_URL", "https://task-frontend-q4nk.onrender.com")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
@@ -513,9 +513,12 @@ def verify_email(token: str, db: Session = Depends(get_db)):
     db.commit()
 
     return HTMLResponse(f"""
-        <div style="font-family:Arial;max-width:600px;margin:40px auto;padding:24px;border:1px solid #eee;border-radius:10px;">
-          <h2>✅ Email Verified</h2>
-          <p>{user.email} has been verified successfully.</p>
-          <a href="{FRONTEND_LOGIN_URL}" style="display:inline-block;margin-top:14px;padding:10px 16px;background:#4CAF50;color:#fff;text-decoration:none;border-radius:6px;">Go to Login</a>
-        </div>
-    """)
+    <div style="font-family:Arial;max-width:600px;margin:40px auto;padding:24px;border:1px solid #eee;border-radius:10px;">
+      <h2>✅ Email Verified</h2>
+      <p>{user.email} has been verified successfully.</p>
+      <a href="{FRONTEND_LOGIN_URL}" 
+         style="display:inline-block;margin-top:14px;padding:10px 16px;background:#4CAF50;color:#fff;text-decoration:none;border-radius:6px;">
+         Go to Login
+      </a>
+    </div>
+""")
