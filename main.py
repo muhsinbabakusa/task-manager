@@ -43,7 +43,7 @@ SMTP_PASS = os.getenv("SMTP_PASS", "")
 
 
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://task-manager-8d1z.onrender.com")
-FRONTEND_LOGIN_URL = os.getenv("FRONTEND_LOGIN_URL", "https://tick-app.vercel.app/")
+FRONTEND_LOGIN_URL = os.getenv("FRONTEND_LOGIN_URL", "https://task-frontend-q4nk.onrender.com")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
@@ -58,7 +58,7 @@ app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://tick-app.vercel.app/",
+        "https://task-frontend-q4nk.onrender.com",
     ],  # 👈 You can restrict this to ["http://127.0.0.1:5500"] later
     allow_credentials=True,
     allow_methods=["*"],
