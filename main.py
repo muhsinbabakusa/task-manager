@@ -42,7 +42,7 @@ SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
 
 
-PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://task-manager-8d1z.onrender.com")
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://tick-app.vercel.app/")
 FRONTEND_LOGIN_URL = os.getenv("FRONTEND_LOGIN_URL", "https://task-frontend-q4nk.onrender.com")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
